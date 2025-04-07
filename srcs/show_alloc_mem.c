@@ -1,82 +1,67 @@
 
 #include "_malloc.h"
-
-static void
-print_dec(size_t n)
-{
-	char	c;
-
-	if (n > 9)
-	{
-		print_dec(n / 10);
-		n %= 10;
-	}
-	c = n + '0';
-	write(1, &c, 1);
-}
-
-static void
-print_hexa(size_t n)
-{
-	char	c;
-
-	if (n > 15)
-	{
-		print_hexa(n / 16);
-		n %= 16;
-	}
-	if (n < 10)
-		c = n + '0';
-	else
-		c = n + 'A' - 10;
-	write(1, &c, 1);
-}
-
-static void
-print_address(size_t n)
-{
-	write(1, "0x", 2);
-	print_hexa(n);
-}
+#include "ft_printf.h"
 
 static size_t
-print_alloc(struct s_area *area)
+print_alloc(struct s_area *area, size_t zone_id)
 {
-	unsigned char	*ptr;
-	unsigned char	*max_area;
-	struct s_block	*block;
-	size_t			total_alloc_size;
-
-	print_address((size_t)area);
-	write(1, "\n", 1);
+	if (area == NULL)
+	{
+		switch (zone_id)
+		{
+			case 0:
+				ft_printf("TINY: %p\n\n", area);
+				break ;
+			case 1:
+				ft_printf("SMALL: %p\n\n", area);
+				break ;
+			case 2:
+				ft_printf("LARGE: %p\n\n", area);
+				break ;
+			default:
+				break ;
+		}
+		return 0;
+	}
+	size_t total_alloc_size;
 
 	total_alloc_size = 0;
 	while (area != NULL)
 	{
-		block = &(area->block);
-		max_area = (unsigned char *)area + area->area_size;
-		while ((size_t)block < (size_t)max_area)
-		{	
-			ptr = &(block->data);
-			if ((block->size & ALLOCED_FLAG) == ALLOCED_FLAG)
+		struct s_block	*block;
+		
+		switch (zone_id)
+		{
+			case 0:
+				ft_printf("TINY: %p\n", area);
+				break ;
+			case 1:
+				ft_printf("SMALL: %p\n", area);
+				break ;
+			case 2:
+				ft_printf("LARGE: %p\n", area);
+				break ;
+			default:
+				return 0;
+		}
+		block = area->data_ptr;
+		while (block->prev_block != NULL || block == area->data_ptr)
+		{
+			if (block->n_free_list == NULL)
 			{
-				print_address((size_t)ptr);
-				write(1, " - ", 3);
-				ptr += block->size - ALLOCED_FLAG;
-				print_address((size_t)ptr);
-				write(1, " : ", 3);
-				print_dec(block->size - ALLOCED_FLAG);
-				write(1, " bytes\n", 7);
-				total_alloc_size += block->size - ALLOCED_FLAG;
+				// block is in use
+				ft_printf("%p - %p : %u bytes\n", &block->data, &block->data + block->size, block->size);
+				total_alloc_size += block->size;
 			}
 			else
-				ptr += block->size - ALLOCED_FLAG;
-			ptr += BLOCK_TAIL_SIZE;
-			block = (struct s_block *)ptr;
+			{
+				ft_printf("%p - %p : %u free bytes\n", &block->data, &block->data + block->size, block->size);
+			}
+			block = (struct s_block *)(&block->data + block->size); 
 		}
-		area = area->next_area;
+		ft_printf("\n");
+		area = area->next;
 	}
-	write(1, "\n", 1);
 	return total_alloc_size;
 }
 
@@ -84,17 +69,11 @@ void show_alloc_mem(void)
 {
 	size_t total_alloc_size;
 
+	ft_printf("HEAP:\n\n");
 	total_alloc_size = 0;
-	write(1, "TINY: ", 6);
-	total_alloc_size += print_alloc(heap.area[0]);
-
-	write(1, "SMALL: ", 7);
-	total_alloc_size += print_alloc(heap.area[1]);
-
-	write(1, "LARGE: ", 7);
-	total_alloc_size += print_alloc(heap.area[2]);
-
-	write(1, "Total : ", 8);
-	print_dec(total_alloc_size);
-	write(1, " bytes\n", 8);
+	for (size_t i = 0; i < 3; i++)
+	{
+		total_alloc_size += print_alloc(heap.area[i], i);
+	}
+	ft_printf("Total: %u bytes in use\n", total_alloc_size);
 }

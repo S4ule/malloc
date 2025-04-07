@@ -2,51 +2,65 @@
 SRCDIR	=	./srcs
 SRCS	=	malloc.c\
 			free.c\
+			realloc.c\
+			alloc_utils.c\
 			show_alloc_mem.c\
-			alloc_utils.c
+			ft_printf.c\
 
-OBJDIR	=	./objs
+#--------------
+OBJDIR		=	./objs
+SRCSDIR 	=	./srcs
+OUTPUTDIR	=	./outlib
+#--------------
+# auto
 OBJS	=	$(addprefix $(OBJDIR)/,$(SRCS:.c=.o))
 
 ifeq ($(HOSTTYPE),)
 	HOSTTYPE := $(shell uname -m)_$(shell uname -s)
 endif
-
+#--------------
 LIBS    =   
 INCLUDE =	-I ./include
 CFLAGS	=	-g3 -Wall -Wextra -Werror
 
+LN_NAME	=	libft_malloc.a
 NAME	=	libft_malloc_$(HOSTTYPE).a
+#--------------
+# rules
 
 default:
 	make all
 
-$(OBJDIR)/%.o : $(SRCDIR)/%.c
+$(OBJDIR)/%.o : $(SRCSDIR)/%.c
 	gcc $(CFLAGS) $(INCLUDE) $(LIBS) -c $< -o $@
 
 $(OBJDIR):
 	mkdir $(OBJDIR)
+	mkdir $(OUTPUTDIR)
 
-$(NAME):	$(OBJDIR) $(OBJS)
-	ar rc $(NAME) $(OBJS)
-	ranlib $(NAME)
+$(OUTPUTDIR)/$(NAME):	$(OBJDIR) $(OUTPUTDIR) $(OBJS) $(OUTPUTDIR)/malloc.h
+	ar rc $(OUTPUTDIR)/$(NAME) $(OBJS)
+	ranlib $(OUTPUTDIR)/$(NAME)
+	ln -s $(OUTPUTDIR)/$(NAME) $(LN_NAME)
 
-all:	$(NAME)
-	make test
+$(OUTPUTDIR)/malloc.h:
+	cp ./include/malloc.h $(OUTPUTDIR)/malloc.h
+
+$(NAME):	$(OUTPUTDIR)/$(NAME)
+
+all:	$(OUTPUTDIR)/$(NAME)
 
 clean:
 	rm -f $(OBJS)
 	rm -Rf $(OBJDIR)
 
 fclean:		clean
-	rm -f $(NAME)
+	rm -Rf $(OUTPUTDIR)
+	rm -f $(LN_NAME)
 	rm -f ./a.out
 
 re:
 	make fclean
 	make all
 
-test:
-	gcc -g3 main.c -L. -lft_malloc_x86_64_Linux -I include
-
-.PHONY:	default all clean fclean re test
+.PHONY:	default all clean fclean re
